@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>文件上传</title>
+  <style>
+    input[type="button"] {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>文件上传</h2>
+  <input type="file" name="test" id="uploadFile">
+  <input type="button" value="上传" id="upload">
+  <input type="button" value="暂停" id="pause">
+  <p>上传进度：<span id="uploadPrg"></span></p>
+  <script>
+    var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
+
+    var uploadFile = document.getElementById('uploadFile')
+    var uploadBtn = document.getElementById('upload')
+    var pauseBtn = document.getElementById('pause')
+    var uploadPrg = document.getElementById('uploadPrg')
+    var chunkSize = 1024 * 1024 * 2 // 4MB一块
+    var chunks, currentChunk = 0
+    var file, fileSize, fileIndex
+    var isPause = false
+
+    function sliceChunks () {
+      var start = currentChunk * chunkSize
+      var end = (start + chunkSize > fileSize) ? fileSize : (start + chunkSize)
+
+      return blobSlice.call(file, start, end)
+    }
+
+
+    uploadFile.onchange = function () {
+      // 更换文件后，进行初始化
+      fileIndex = 0
+      currentChunk = 0
+      uploadPrg.innerText = ''
+      uploadBtn.value = '上传'
+
+      file = this.files[0]
+      fileSize = file.size
+      chunks = Math.ceil(fileSize / chunkSize)
+    }
+
+    uploadBtn.onclick = uploadData
+
+    function uploadData () {
+      if (!fileSize) {
+        alert('请选择要上传的文件')
+        return
+      }
+
+      isPause = false
+
+      var xhr = new XMLHttpRequest()
+      var chunkData = sliceChunks()
+      var formData = new FormData()
+
+      fileIndex = currentChunk + 1
+      if (fileIndex > chunks) return 
+
+      formData.append('fileName', file.name)
+      formData.append('fileSize', file.size)
+      formData.append('fileIndex', fileIndex)
+      formData.append('fileContent', chunkData)
+
+      xhr.upload.onloadend = function (e){
+        currentChunk++
+        if (fileIndex < chunks && !isPause) {
+          uploadData ()
+        }
+      }
+
+      xhr.upload.onprogress = function (e) {
+        uploadPrg.innerText = (fileIndex * 10000 / (chunks * 100)).toFixed(2) + '%'
+        fileIndex === chunks && (uploadBtn.value = '上传完成')
+      }
+
+      xhr.open("POST", '/upload')
+      xhr.send(formData)  
+    }
+
+    pause.onclick = () => {
+      if (!fileSize) {
+        alert('请选择要上传的文件')
+        return
+      }
+
+      isPause = true
+      uploadBtn.value = '继续上传'
+    }
+  </script>
+</body>
+</html>
