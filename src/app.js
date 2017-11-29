@@ -36,7 +36,7 @@ app.post('/upload', multipartMiddleware, (req, res, next) => {
 
 
 app.get('/', (req, res) => {
-  let form = fs.readFileSync('./index.html', {
+  let form = fs.readFileSync(__dirname + '/index.html', {
     encoding: 'utf8'
   })
 

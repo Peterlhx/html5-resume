@@ -7,6 +7,6 @@
 
 ```bash
 $ npm install
-$ node app.js
+$ npm run dev
 ```
 浏览器输入：localhost:8080
