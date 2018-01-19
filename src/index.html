@@ -27,10 +27,6 @@
     var file, fileSize, fileIndex
     var isPause = false, isGetMD5 = false
 
-
-    var fileReader = new FileReader()
-    var spark = new SparkMD5.ArrayBuffer()
-
     // 文件分块
     function sliceChunks () {
       var start = currentChunk * chunkSize
@@ -50,16 +46,48 @@
       fileSize = file.size
       chunks = Math.ceil(fileSize / chunkSize)
 
-      // 计算文件md5值后执行上传
-      fileReader.readAsArrayBuffer(file)
-
-      fileReader.onload = function (e) {
-        // 计算md5
-        spark.append(e.target.result)
-        file.fileMD5 = spark.end()
-        isGetMD5 = true
-      }
+      loadFromBlob(file)
     }
+
+    function loadFromBlob (file) {
+      var chunkSize = 1024 * 1024 * 2, // 每一个文件块为2MB
+        chunks = Math.ceil(file.size / chunkSize), // 文件块总数
+        chunk = 0, // 文件块的序号
+        spark = new SparkMD5.ArrayBuffer(),
+        fileReader = new FileReader()
+        
+      function loadNext () {
+        var start, end
+        
+        start = chunk * chunkSize
+        end = Math.min(start + chunkSize, file.size)
+        
+        // 分块读取文件流
+        fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
+        
+        fileReader.onload = (e) => {
+          spark.append(e.target.result)
+        }
+        
+        fileReader.onloadend = () => {
+          fileReader.onload = fileReader.onloadend = null
+          
+          if (++chunk < chunks) {
+            setTimeout(loadNext, 1)
+          } else {
+            setTimeout(() => {
+              file.fileMD5 = spark.end()
+              isGetMD5 = true
+              loadNex = spark = null
+           }, 50)
+          }
+        }
+      }
+
+      loadNext()
+    }
+
+
 
     uploadBtn.onclick = uploadData
 
